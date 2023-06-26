@@ -1,6 +1,6 @@
 package day08.testcase;
 
-import org.bouncycastle.jce.provider.JCEMac;
+import com.lemon.encryption.RSAManager;
 import org.testng.annotations.Test;
 
 import static io.restassured.RestAssured.given;
