@@ -4,10 +4,14 @@ import com.alibaba.fastjson.JSONObject;
 import day08.data.Environment;
 import day08.pojoinfo.PojoInfoTest;
 import day08.util.DBUtil;
+import day08.util.PropertiesUtil;
+import io.qameta.allure.Allure;
+import io.restassured.RestAssured;
+import io.restassured.config.LogConfig;
 import io.restassured.response.Response;
 import org.testng.Assert;
 
-import java.io.File;
+import java.io.*;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -18,6 +22,20 @@ import static io.restassured.RestAssured.given;
 public class BaseTest {
     //封装request请求
     public static Response request(PojoInfoTest pojoInfoTest) {
+        String properties = PropertiesUtil.redProperties("log_output", "src/test/resources/config.properties");
+        String file = "log/test" + pojoInfoTest.getCaseid() + ".log";
+        if (properties.equals("allure")) {
+            PrintStream fileOutPutStream = null;
+            try {
+                fileOutPutStream = new PrintStream(new File(file));
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+            RestAssured.config = RestAssured.config().logConfig(LogConfig.logConfig().defaultStream(fileOutPutStream));
+        } else if (properties.equals("console")) {
+
+        }
+
         String method = pojoInfoTest.getMethod();
         String url = pojoInfoTest.getUrl();
         String headers = pojoInfoTest.getHeaders();
@@ -44,6 +62,12 @@ public class BaseTest {
         } else if ("delete".equals(method)) {
             res = given().headers(header).body(params).log().all().when().delete(url).then().log().all().extract().response();
         }
+        try {
+            Allure.addAttachment(pojoInfoTest.getTitle() + "日志",
+                    new FileInputStream(file));
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         return res;
     }
 
@@ -59,7 +83,7 @@ public class BaseTest {
                 Object value = actualValuesMap.get(key);
                 if (value.equals("bobystring")) {
                     String valueString = request.body().asString();
-                    Environment.var1.put(key,valueString);
+                    Environment.var1.put(key, valueString);
                 } else {
                     Object values = request.jsonPath().get(value + "");
                     Environment.var1.put(key, values);
@@ -101,17 +125,18 @@ public class BaseTest {
             }
         }
     }
+
     //期望值与数据库结果封装断言
-    public void asserDB(PojoInfoTest pojoInfoTest){
+    public void asserDB(PojoInfoTest pojoInfoTest) {
         String actualValues = pojoInfoTest.getActualValues();
-        if (actualValues!=null){
+        if (actualValues != null) {
             actualValues = replaceParam(actualValues);
-            Map<String,Object> actualValuesMap = JSONObject.parseObject(actualValues);
+            Map<String, Object> actualValuesMap = JSONObject.parseObject(actualValues);
             Set<String> AllKey = actualValuesMap.keySet();
             for (String key : AllKey) {
-                Object dbKey = DBUtil.QuerySingData(key)+"";
-                Object values =  actualValuesMap.get(key);
-                Assert.assertEquals(dbKey,values);
+                Object dbKey = DBUtil.QuerySingData(key) + "";
+                Object values = actualValuesMap.get(key);
+                Assert.assertEquals(dbKey, values);
             }
         }
     }

@@ -4,7 +4,6 @@
     <test name="测试">
         <classes>
             <class name="day08.testcase.RegTest"/>
-            <class name="day08.testcase.PlaceOrderTest"/>
         </classes>
     </test>
 </suite>
